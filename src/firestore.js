@@ -1,18 +1,15 @@
+import { getContext } from 'svelte';
 import { writable } from 'svelte/store';
-import { assertApp } from './helpers';
-import { startTrace, stopTrace } from './perf';
 
 // Svelte Store for Firestore Document
-export function docStore(path, opts) {
-  const firestore = assertApp('firestore');
+export function docStore(ref, opts) {
+  const {
+    firebase: {
+      onSnapshot,
+    }
+  } = getContext('firebase');
 
-  const { startWith, log, traceId, maxWait, once } = { maxWait: 10000, ...opts };
-
-  // Create the Firestore Reference
-  const ref = typeof path === 'string' ? firestore.doc(path) : path;
-
-  // Performance trace
-  const trace = traceId && startTrace(traceId);
+  const { startWith, log, trace, maxWait, once } = { maxWait: 10000, ...opts };
 
   // Internal state
   let _loading = typeof startWith !== undefined;
@@ -25,12 +22,12 @@ export function docStore(path, opts) {
   // State should never change without emitting a new value
   // Clears loading state on first call
   const next = (val, err) => {
-    _loading = false; 
+    _loading = false;
     _firstValue = false;
     _waitForIt && clearTimeout(_waitForIt);
     _error = err || null;
     set(val);
-    trace && stopTrace(trace);
+    trace && trace.state == 2 && trace.stop();
   };
 
   // Timout
@@ -41,8 +38,8 @@ export function docStore(path, opts) {
     _waitForIt = maxWait && setTimeout(() => _loading && next(null, new Error(`Timeout at ${maxWait}. Using fallback slot.`) ), maxWait)
 
     // Realtime firebase subscription
-    _teardown = ref.onSnapshot(
-      snapshot => {
+    _teardown = onSnapshot(ref, {
+      next(snapshot) {
         const data = snapshot.data() || (_firstValue && startWith) || null;
 
         // Optional logging
@@ -59,13 +56,12 @@ export function docStore(path, opts) {
         // Teardown after first emitted value if once
         once && _teardown();
       },
-
       // Handle firebase thrown errors
-      error => {
+      error(error) {
         console.error(error);
         next(null, error);
       }
-    );
+    });
 
     // Removes firebase listener when store completes
     return () => _teardown();
@@ -89,19 +85,23 @@ export function docStore(path, opts) {
 }
 
 // Svelte Store for Firestore Collection
-export function collectionStore(path, queryFn, opts) {
-  const firestore = assertApp('firestore');
+export function collectionStore(ref, queryConstraints, opts) {
+  const {
+    firebase: {
+      query,
+      onSnapshot,
+    }
+  } = getContext('firebase');
 
-  const { startWith, log, traceId, maxWait, once, idField, refField } = {
+  const { startWith, log, trace, maxWait, once, idField, refField } = {
     idField: 'id',
     refField: 'ref',
     maxWait: 10000,
     ...opts
   };
 
-  const ref = typeof path === 'string' ? firestore.collection(path) : path;
-  const query = queryFn && queryFn(ref);
-  const trace = traceId && startTrace(traceId);
+  const _query = query(ref, ...queryConstraints);
+  if (trace) trace.start();
 
   let _loading = typeof startWith !== undefined;
   let _error = null;
@@ -111,25 +111,24 @@ export function collectionStore(path, queryFn, opts) {
 
   // Metadata for result
   const calcMeta = (val) => {
-    return val && val.length ? 
+    return val && val.length ?
       { first: val[0], last: val[val.length - 1] } : {}
   }
 
   const next = (val, err) => {
-    _loading = false; 
+    _loading = false;
     _waitForIt && clearTimeout(_waitForIt);
     _error = err || null;
     _meta = calcMeta(val);
     set(val);
-    trace && stopTrace(trace);
+    trace && trace.state == 2 && trace.stop();
   };
 
   const start = () => {
     _waitForIt = maxWait && setTimeout(() => _loading && next(null, new Error(`Timeout at ${maxWait}. Using fallback slot.`) ), maxWait)
 
-    _teardown = (query || ref).onSnapshot(
-      snapshot => {
-
+    _teardown = onSnapshot((_query || ref), {
+      next(snapshot) {
         // Will always return an array
         const data = snapshot.docs.map(docSnap => ({
           ...docSnap.data(),
@@ -148,12 +147,11 @@ export function collectionStore(path, queryFn, opts) {
         next(data);
         once && _teardown();
       },
-
-      error => {
+      error(error) {
         console.error(error);
         next(null, error);
-      }
-    );
+      },
+    });
 
     return () => _teardown();
   };
@@ -163,7 +161,6 @@ export function collectionStore(path, queryFn, opts) {
 
   return {
     subscribe,
-    firestore,
     ref,
     get loading() {
       return _loading;

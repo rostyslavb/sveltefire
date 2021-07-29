@@ -1,7 +1,7 @@
 <script>
-  export let path;
-  export let query = null;
-  export let traceId = "";
+  export let ref;
+  export let queryConstraints = null;
+  export let trace = null;
   export let log = false;
   export let startWith = undefined;
   export let maxWait = 10000;
@@ -13,13 +13,13 @@
 
   const opts = {
     startWith,
-    traceId,
+    trace,
     log,
     maxWait,
     once
   }
 
-  let store = collectionStore(path, query, opts);
+  let store = collectionStore(ref, queryConstraints, opts);
 
   const dispatch = createEventDispatcher();
 
@@ -29,7 +29,7 @@
   $: {
     if (unsub) {
       unsub();
-      store = collectionStore(path, query, opts);
+      store = collectionStore(ref, queryConstraints, opts);
       dispatch("ref", { ref: store.ref });
     }
 

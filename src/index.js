@@ -1,3 +1,4 @@
+import Firebase from './Firebase.svelte';
 import FirebaseApp from './FirebaseApp.svelte';
 import User from './User.svelte';
 import Doc from './Doc.svelte';
@@ -9,10 +10,11 @@ import StorageRef from './StorageRef.svelte';
 import UploadTask from './UploadTask.svelte';
 
 export {
+    Firebase,
     FirebaseApp,
     User,
     Doc,
-    Collection, 
+    Collection,
     userStore,
     docStore,
     collectionStore,

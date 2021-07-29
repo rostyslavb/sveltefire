@@ -1,7 +1,7 @@
 <script>
-  export let path;
+  export let ref;
   export let log = false;
-  export let traceId = "";
+  export let trace = null;
   export let startWith = undefined; // Why? Firestore returns null for docs that don't exist, predictible loading state.
   export let maxWait = 10000;
   export let once = false;
@@ -11,13 +11,13 @@
 
   const opts = {
     startWith,
-    traceId,
+    trace,
     log,
     maxWait,
     once
   }
 
-  let store = docStore(path, opts);
+  let store = docStore(ref, opts);
 
   const dispatch = createEventDispatcher();
 
@@ -28,7 +28,7 @@
     if (unsub) {
       // Unsub and create new store
       unsub();
-      store = docStore(path, opts);
+      store = docStore(ref, opts);
       dispatch("ref", { ref: store.ref });
     }
 
