@@ -73,7 +73,6 @@ export function docStore(ref, opts) {
 
   return {
     subscribe,
-    firestore,
     ref,
     get loading() {
       return _loading;
