@@ -1,20 +1,21 @@
 <script>
-  export let path;
+  export let ref;
   export let file;
   export let log = false;
-  export let traceId = "";
+  export let trace = null;
 
   import { onDestroy, onMount, createEventDispatcher } from "svelte";
   import { uploadTaskStore } from "./storage";
 
+  const dispatch = createEventDispatcher();
+
   const opts = {
-    traceId,
+    trace,
     log,
+    oncomplete: () => dispatch("complete"),
   }
 
-  let store = uploadTaskStore(path, file, opts);
-
-  const dispatch = createEventDispatcher();
+  let store = uploadTaskStore(ref, file, opts);
 
   let unsub;
 
@@ -41,18 +42,13 @@
 <slot name="before" />
 
 {#if $store}
-  <slot 
-    snapshot={$store} 
-    ref={store.ref} 
+  <slot
+    snapshot={$store}
+    ref={store.ref}
     task={store.task}
-    downloadURL={store.downloadURL} 
     error={store.error} />
 {:else}
   <slot name="fallback" />
-{/if}
-
-{#if store.downloadURL}
-  <slot name="complete" />
 {/if}
 
 <slot name="after" />

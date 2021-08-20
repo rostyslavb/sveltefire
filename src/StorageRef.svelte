@@ -1,7 +1,7 @@
 <script>
-  export let path = "";
+  export let ref;
   export let log = false;
-  export let traceId = "";
+  export let trace = null;
   export let startWith = undefined;
   export let url = true;
   export let meta = false;
@@ -11,13 +11,13 @@
 
   const opts = {
     startWith,
-    traceId,
+    trace,
     log,
     meta,
     url,
   };
 
-  let store = fileDownloadStore(path, opts);
+  let store = fileDownloadStore(ref, opts);
 
   const dispatch = createEventDispatcher();
 
@@ -28,7 +28,7 @@
     if (unsub) {
       // Unsub and create new store
       unsub();
-      store = fileDownloadStore(path, opts);
+      store = fileDownloadStore(ref, opts);
       dispatch("ref", { ref: store.ref });
     }
 

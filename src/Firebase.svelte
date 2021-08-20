@@ -1,12 +1,8 @@
 <script>
   import { setContext } from "svelte";
-  export let firebase;
+  export let firebase = {};
 
-  setContext("firebase", {
-    get firebase() {
-      return firebase;
-    }
-  });
+  setContext("firebase", firebase);
 </script>
 
 <slot />

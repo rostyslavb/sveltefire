@@ -1,18 +1,12 @@
 import { writable } from 'svelte/store';
-import { assertApp } from './helpers';
+import { getContext } from 'svelte';
 import { startTrace, stopTrace } from './perf';
 
 // Svelte Store for Storage file
-export function fileDownloadStore(path, opts) {
-  const storage = assertApp('storage');
+export function fileDownloadStore(ref, opts) {
+  const { getMetadata, getDownloadURL } = getContext("firebase");
 
-  const { log, traceId, startWith, url, meta, } = { url: true, ...opts };
-
-  const storageRef = storage.ref();
-  const ref = typeof path === 'string' ? storageRef.child(path) : path;
-
-  // Performance trace
-  const trace = traceId && startTrace(traceId);
+  const { log, trace, startWith, url, meta, } = { url: true, ...opts };
 
   // Internal state
   let _loading = typeof startWith !== undefined;
@@ -21,26 +15,23 @@ export function fileDownloadStore(path, opts) {
   // State should never change without emitting a new value
   // Clears loading state on first call
   const next = (val, err) => {
-    _loading = false; 
+    _loading = false;
     _error = err || null;
     set(val);
-    trace && stopTrace(trace);
+    stopTrace(trace);
   };
 
   // Timout
   // Runs of first subscription
-    const start = async() => {
+  const start = () => {
+    const requests = [url && getDownloadURL(ref), meta && getMetadata(ref)];
 
-      const requests = [url && ref.getDownloadURL(), meta && ref.getMetadata()];
-
-      Promise.all(requests)
-              .then(result => next({
-                url: result[0],
-                metadata: result[1]
-              }))
-              .catch(e => next(null, e))
-
-    };
+    Promise
+      .all(requests)
+      .then(([ url, metadata ]) => next({ url, metadata }))
+      .catch(e => next(null, e));
+    return () => {};
+  };
 
 
   // Svelte store
@@ -49,7 +40,6 @@ export function fileDownloadStore(path, opts) {
 
   return {
     subscribe,
-    storage,
     ref,
     get loading() {
       return _loading;
@@ -60,21 +50,12 @@ export function fileDownloadStore(path, opts) {
   };
 }
 
-export function uploadTaskStore(path, file, opts) {
-  const storage = assertApp('storage');
-
-  const { log, traceId } = { ...opts };
-
-  const storageRef = storage.ref();
-  
-  const ref = typeof path === 'string' ? storageRef.child(path) : path;
-
-  // Performance trace
-  const trace = traceId && startTrace(traceId);
+export function uploadTaskStore(ref, file, opts) {
+  const { uploadBytesResumable } = getContext('firebase');
+  const { log, trace, oncomplete } = { ...opts };
 
   // Internal state
   let _error = null;
-  let _url = ''; // download url
   let _task; // upload task
 
   // Emits UploadTaskSnapshot
@@ -84,19 +65,16 @@ export function uploadTaskStore(path, file, opts) {
   };
 
   const start = () => {
-    _task = ref.put(file);
+    _task = uploadBytesResumable(ref, file);
 
     const _teardown = _task.on('state_changed', {
       next: (snap) => next(snap),
       error: (e) => next(_task.snapshot, e),
       complete: () => {
-        console.log('done')
-        ref.getDownloadURL().then(url => {
-          next(_task.snapshot);
-          _url = url;
-          if (log) console.log(`Upload Complete: ${url}`);
-          trace && stopTrace(trace);
-        });
+        if (log) console.log(`Upload Complete: ${url}`);
+        next(_task.snapshot);
+        stopTrace(trace);
+        if (oncomplete) oncomplete();
       }
     });
 
@@ -108,11 +86,7 @@ export function uploadTaskStore(path, file, opts) {
 
   return {
     subscribe,
-    storage,
     ref,
-    get downloadURL() {
-      return _url;
-    },
     get task() {
       return _task;
     },

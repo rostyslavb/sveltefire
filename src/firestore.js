@@ -1,12 +1,11 @@
 import { getContext } from 'svelte';
 import { writable } from 'svelte/store';
+import { startTrace, stopTrace } from "./perf";
 
 // Svelte Store for Firestore Document
 export function docStore(ref, opts) {
   const {
-    firebase: {
-      onSnapshot,
-    }
+    onSnapshot,
   } = getContext('firebase');
 
   const { startWith, log, trace, maxWait, once } = { maxWait: 10000, ...opts };
@@ -27,7 +26,7 @@ export function docStore(ref, opts) {
     _waitForIt && clearTimeout(_waitForIt);
     _error = err || null;
     set(val);
-    trace && trace.state == 2 && trace.stop();
+    stopTrace(trace);
   };
 
   // Timout
@@ -86,10 +85,8 @@ export function docStore(ref, opts) {
 // Svelte Store for Firestore Collection
 export function collectionStore(ref, queryConstraints, opts) {
   const {
-    firebase: {
-      query,
-      onSnapshot,
-    }
+    query,
+    onSnapshot,
   } = getContext('firebase');
 
   const { startWith, log, trace, maxWait, once, idField, refField } = {
@@ -100,7 +97,7 @@ export function collectionStore(ref, queryConstraints, opts) {
   };
 
   const _query = query(ref, ...queryConstraints);
-  if (trace) trace.start();
+  startTrace(trace);
 
   let _loading = typeof startWith !== undefined;
   let _error = null;
@@ -120,7 +117,7 @@ export function collectionStore(ref, queryConstraints, opts) {
     _error = err || null;
     _meta = calcMeta(val);
     set(val);
-    trace && trace.state == 2 && trace.stop();
+    stopTrace(trace);
   };
 
   const start = () => {
