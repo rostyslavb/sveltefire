@@ -24,7 +24,7 @@
     if (unsub) {
       // Unsub and create new store
       unsub();
-      store = uploadTaskStore(path, file, opts);
+      store = uploadTaskStore(ref, file, opts);
       dispatch("ref", { ref: store.ref });
     }
 
