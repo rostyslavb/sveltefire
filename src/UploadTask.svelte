@@ -1,6 +1,6 @@
 <script>
   export let ref;
-  export let file;
+  export let data;
   export let log = false;
   export let trace = null;
 
@@ -12,31 +12,31 @@
   const opts = {
     trace,
     log,
-    oncomplete: () => dispatch("complete"),
   }
 
-  let store = uploadTaskStore(ref, file, opts);
+  let store = uploadTaskStore(ref, data, opts);
 
   let unsub;
+
+  function onsnapshot(snapshot) {
+    dispatch("snapshot", { snapshot });
+  }
 
   // Props changed
   $: {
     if (unsub) {
       // Unsub and create new store
-      unsub();
-      store = uploadTaskStore(ref, file, opts);
+      unsub = void unsub();
+      store = uploadTaskStore(ref, data, opts);
       dispatch("ref", { ref: store.ref });
     }
 
-    unsub = store.subscribe(snapshot => {
-      dispatch("snapshot", {
-        snapshot
-      });
-    });
+    if (!unsub)
+      unsub = store.subscribe(onsnapshot);
   }
 
-  onMount(() => dispatch("ref", { ref: store.ref }))
-  onDestroy(() => unsub());
+  onMount(() => dispatch("ref", { ref: store.ref }));
+  onDestroy(() => (unsub = void unsub()));
 </script>
 
 <slot name="before" />

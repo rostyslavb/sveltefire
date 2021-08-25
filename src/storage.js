@@ -50,9 +50,9 @@ export function fileDownloadStore(ref, opts) {
   };
 }
 
-export function uploadTaskStore(ref, file, opts) {
+export function uploadTaskStore(ref, data, opts) {
   const { uploadBytesResumable } = getContext('firebase');
-  const { log, trace, oncomplete } = { ...opts };
+  const { log, trace } = { ...opts };
 
   // Internal state
   let _error = null;
@@ -65,20 +65,22 @@ export function uploadTaskStore(ref, file, opts) {
   };
 
   const start = () => {
-    _task = uploadBytesResumable(ref, file);
+    _task = uploadBytesResumable(ref, data);
 
     const _teardown = _task.on('state_changed', {
       next: (snap) => next(snap),
       error: (e) => next(_task.snapshot, e),
       complete: () => {
-        if (log) console.log(`Upload Complete: ${url}`);
+        if (log) console.log(`Upload Complete: ${ref.fullPath}`);
         next(_task.snapshot);
         stopTrace(trace);
-        if (oncomplete) oncomplete();
       }
     });
 
-    return () => _teardown();
+    return () => {
+      _task.cancel();
+      _teardown();
+    };
   };
 
   const store = writable(null, start);
@@ -87,6 +89,7 @@ export function uploadTaskStore(ref, file, opts) {
   return {
     subscribe,
     ref,
+    data,
     get task() {
       return _task;
     },
