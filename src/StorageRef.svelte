@@ -33,13 +33,7 @@
     }
 
     unsub = store.subscribe(result => {
-     if (result) {
-      dispatch("result", {
-        url: result.url,
-        metadata: result.metadata,
-      });
-     }
-
+     if (result) dispatch("result", result);
     });
   }
 
