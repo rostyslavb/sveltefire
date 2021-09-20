@@ -34,9 +34,9 @@
 
     unsub = store.subscribe(result => {
      if (result) {
-      dispatch("storageResult", {
-        downloadURL: result[0],
-        metadata: result[1],
+      dispatch("result", {
+        url: result.url,
+        metadata: result.metadata,
       });
      }
 
