@@ -1,14 +1,19 @@
-import { getContext } from 'svelte';
 import { writable } from 'svelte/store';
+import { getFirestore, doc, collection, onSnapshot, query } from 'firebase/firestore';
 import { startTrace, stopTrace } from "./perf";
+import { getApp } from './context';
 
 // Svelte Store for Firestore Document
-export function docStore(ref, opts) {
-  const {
-    onSnapshot,
-  } = getContext('firebase');
+export function docStore(path, opts) {
+  const firestore = getFirestore(getApp());
 
-  const { startWith, log, trace, maxWait, once } = { maxWait: 10000, ...opts };
+  const { startWith, log, traceId, maxWait, once } = { maxWait: 10000, ...opts };
+
+  // Create the Firestore Reference
+  const ref = typeof path === 'string' ? doc(firestore, path) : path;
+
+  // Performance trace
+  const trace = traceId && startTrace(traceId);
 
   // Internal state
   let _loading = typeof startWith !== undefined;
@@ -16,7 +21,6 @@ export function docStore(ref, opts) {
   let _error = null;
   let _teardown;
   let _waitForIt;
-
 
   // State should never change without emitting a new value
   // Clears loading state on first call
@@ -26,7 +30,7 @@ export function docStore(ref, opts) {
     _waitForIt && clearTimeout(_waitForIt);
     _error = err || null;
     set(val);
-    stopTrace(trace);
+    trace && stopTrace(trace);
   };
 
   // Timout
@@ -83,21 +87,20 @@ export function docStore(ref, opts) {
 }
 
 // Svelte Store for Firestore Collection
-export function collectionStore(ref, queryConstraints, opts) {
-  const {
-    query,
-    onSnapshot,
-  } = getContext('firebase');
+export function collectionStore(path, queryConstraints, opts) {
+  const firestore = getFirestore(getApp());
 
-  const { startWith, log, trace, maxWait, once, idField, refField } = {
+  const { startWith, log, traceId, maxWait, once, idField, refField } = {
     idField: 'id',
     refField: 'ref',
     maxWait: 10000,
     ...opts
   };
 
+  const ref = typeof path === 'string' ? collection(firestore, path) : path;
+
   const _query = query(ref, ...queryConstraints);
-  startTrace(trace);
+  const trace = traceId && startTrace(traceId);
 
   let _loading = typeof startWith !== undefined;
   let _error = null;
@@ -117,7 +120,7 @@ export function collectionStore(ref, queryConstraints, opts) {
     _error = err || null;
     _meta = calcMeta(val);
     set(val);
-    stopTrace(trace);
+    trace && stopTrace(trace);
   };
 
   const start = () => {

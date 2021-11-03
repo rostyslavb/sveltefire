@@ -1,12 +1,16 @@
 import { writable } from 'svelte/store';
-import { getContext } from 'svelte';
+import { getStorage, ref as getRef, getMetadata, getDownloadURL, uploadBytesResumable } from 'firebase/storage';
+import { getApp } from './context';
 import { startTrace, stopTrace } from './perf';
 
 // Svelte Store for Storage file
-export function fileDownloadStore(ref, opts) {
-  const { getMetadata, getDownloadURL } = getContext("firebase");
+export function fileDownloadStore(path, opts) {
+  const { log, traceId, startWith, url, meta, } = { url: true, ...opts };
 
-  const { log, trace, startWith, url, meta, } = { url: true, ...opts };
+  const ref = typeof path === 'string' ? getRef(getStorage(getApp()), path) : path;
+
+  // Performance trace
+  const trace = traceId && startTrace(traceId);
 
   // Internal state
   let _loading = typeof startWith !== undefined;
@@ -18,7 +22,7 @@ export function fileDownloadStore(ref, opts) {
     _loading = false;
     _error = err || null;
     set(val);
-    stopTrace(trace);
+    trace && stopTrace(trace);
   };
 
   // Timout
@@ -50,9 +54,13 @@ export function fileDownloadStore(ref, opts) {
   };
 }
 
-export function uploadTaskStore(ref, data, opts) {
-  const { uploadBytesResumable } = getContext('firebase');
-  const { log, trace } = { ...opts };
+export function uploadTaskStore(path, data, opts) {
+  const { log, traceId } = { ...opts };
+
+  const ref = typeof path === 'string' ? getRef(getStorage(getApp()), path) : path;
+
+  // Performance trace
+  const trace = traceId && startTrace(traceId);
 
   // Internal state
   let _error = null;
@@ -73,7 +81,7 @@ export function uploadTaskStore(ref, data, opts) {
       complete: () => {
         if (log) console.log(`Upload Complete: ${ref.fullPath}`);
         next(_task.snapshot);
-        stopTrace(trace);
+        trace && stopTrace(trace);
       }
     });
 

@@ -1,11 +1,13 @@
-import { assertApp } from './helpers';
+import { getPerformance, trace } from 'firebase/performance';
+import { getApp } from './context';
 
-export function startTrace(trace) {
-  if (trace) trace.start();
-  return trace;
+export function startTrace(name) {
+  const t = trace(getPerformance(getApp()), name);
+  t.start();
+  return t;
 }
 
-export async function stopTrace(trace) {
-  if (trace && trace.state == 2) trace.stop();
+export function stopTrace(trace) {
+  if (trace.state === 2) trace.stop();
   return null;
 }

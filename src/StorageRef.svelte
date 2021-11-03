@@ -1,7 +1,7 @@
 <script>
   export let ref;
   export let log = false;
-  export let trace = null;
+  export let traceId = null;
   export let startWith = undefined;
   export let url = true;
   export let meta = false;
@@ -11,7 +11,7 @@
 
   const opts = {
     startWith,
-    trace,
+    traceId,
     log,
     meta,
     url,

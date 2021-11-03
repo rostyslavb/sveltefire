@@ -1,7 +1,7 @@
 <script>
   export let ref;
   export let log = false;
-  export let trace = null;
+  export let traceId = null;
   export let startWith = undefined; // Why? Firestore returns null for docs that don't exist, predictible loading state.
   export let maxWait = 10000;
   export let once = false;
@@ -11,7 +11,7 @@
 
   const opts = {
     startWith,
-    trace,
+    traceId,
     log,
     maxWait,
     once

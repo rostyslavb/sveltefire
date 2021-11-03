@@ -2,7 +2,7 @@
   export let ref;
   export let data;
   export let log = false;
-  export let trace = null;
+  export let traceId = null;
 
   import { onDestroy, onMount, createEventDispatcher } from "svelte";
   import { uploadTaskStore } from "./storage";
@@ -10,7 +10,7 @@
   const dispatch = createEventDispatcher();
 
   const opts = {
-    trace,
+    traceId,
     log,
   }
 

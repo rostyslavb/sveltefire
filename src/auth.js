@@ -1,32 +1,18 @@
 import { writable } from 'svelte/store';
-import { assertApp } from './helpers';
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getApp } from './context';
 
+export function userStore() {
+  const app = getApp();
 
-export function userStore(opts = { persist: null }) {
+  const store = writable(null, () => {
+    const teardown = onAuthStateChanged(getAuth(app), set);
+    return () => teardown;
+  });
 
-    const auth = assertApp('auth');
-    const storageKey = 'sveltefire_user';
-    let cached = null;
-  
-    const { persist } = opts;
-  
-    if (persist) {
-      cached = JSON.parse(opts.persist.getItem(storageKey));
-    }
-  
-    const store = writable(cached, () => {
-      const teardown = auth.onAuthStateChanged(u => {
-        set(u);
-        persist && opts.persist.setItem(storageKey, JSON.stringify(u));
-      });
-      return () => teardown;
-    });
-  
-    const { subscribe, set } = store;
-  
-    return {
-      subscribe,
-      auth
-    };
-  }
-  
+  const { subscribe, set } = store;
+
+  return {
+    subscribe,
+  };
+}

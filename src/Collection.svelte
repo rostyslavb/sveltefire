@@ -1,7 +1,7 @@
 <script>
   export let ref;
   export let queryConstraints = null;
-  export let trace = null;
+  export let traceId = null;
   export let log = false;
   export let startWith = undefined;
   export let maxWait = 10000;
@@ -13,7 +13,7 @@
 
   const opts = {
     startWith,
-    trace,
+    traceId,
     log,
     maxWait,
     once
